@@ -2,7 +2,7 @@
   "name": "com.veneto.utils",
   "displayName": "Utils",
   "description": "Helpful utilities to support unity development",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "unity": "2020.3",
   "license": "MIT",
   "author": "Veneto",
