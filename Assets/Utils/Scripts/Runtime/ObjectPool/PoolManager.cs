@@ -51,10 +51,10 @@ namespace Utils.Scripts.Runtime.ObjectPool {
 
         private void Release(GameObject clone) {
             clone.SetActive(false);
-
             if (_instanceLookup.ContainsKey(clone)) {
                 _instanceLookup[clone].ReleaseItem(clone);
                 _instanceLookup.Remove(clone);
+                Destroy(clone);
             } else {
                 Debug.Log($"No pool contains the object: {clone.name}");
             }

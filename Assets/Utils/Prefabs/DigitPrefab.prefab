@@ -43,7 +43,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16f7320104c84838bd40e6f66afdaad7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  value: 0
+  value: 10
   digitNum: 0
   fontSize: 14
   orderInLayer: 0
