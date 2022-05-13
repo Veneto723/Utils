@@ -1,67 +1,100 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEditor;
 using UnityEngine;
-using Utils.Scripts.Runtime.ObjectPool;
 
 namespace Utils.Scripts.Runtime.UI {
     public class DigitController : MonoBehaviour {
-        public GameObject digitPrefab;
+        public enum AlignMode {
+            Left,
+            Center,
+            Right
+        }
+
         public Sprite[] digitSprites;
-        
-        public int value;
-        public int digitNum;
+
+        public long value;
         public float fontSize = 14;
+        public float spacing = 0.5f;
         public int orderInLayer;
-        public bool alignLeft = true;
-        private float ActualFontSize => fontSize * 0.01f;
-        private float Spacing => ActualFontSize * 2f;
+        public AlignMode alignMode = AlignMode.Left;
+        public bool displayOnAwake = true;
+        public bool debugMode;
 
-        private void Start() {
-            Init(value, fontSize);
+        [HideInInspector]
+        public int digitNum;
+
+        private float ActualFontSize => fontSize * 0.05f;
+
+        [HideInInspector]
+        public List<GameObject> objectsPool = new List<GameObject>();
+
+        private void OnValidate() {
+            if (value < 0) value = 0;
+            if (fontSize < 0) fontSize = 0;
         }
-
-        public void Init(int val, float size) {
-            if (value < 0 || size < 0) return;
-            value = val;
-            fontSize = size;
-            if (digitSprites == null || digitSprites.Length == 0) return; // 缺少字体素材
-
-            var digitStr = val.ToString();
-            digitNum = digitStr.Length;
-            for (var i = 0; i < digitNum; i++) {
-                var go = PoolManager.SpawnObject(digitPrefab);
-                go.transform.localScale = new Vector3(ActualFontSize, ActualFontSize);
-                go.transform.position = transform.position;
-                go.transform.position += new Vector3((alignLeft ? i : i - digitNum + 1) * Spacing, 0);
-                var component = go.GetComponent<SpriteRenderer>();
-                component.sprite = digitSprites[int.Parse(digitStr[i].ToString())];
-                component.sortingOrder = orderInLayer;
-                go.transform.SetParent(gameObject.transform);
-            }
-        }
-
+        
         public void SetValue(int val) {
-            if (digitSprites == null || digitSprites.Length == 0) return; // 缺少字体素材
-            var digitStr = val.ToString();
-            if (digitNum < digitStr.Length) {
-                for (var _ = 0; _ < digitStr.Length - digitNum; _++) {
-                    var go = PoolManager.SpawnObject(digitPrefab);
-                    go.transform.SetParent(transform);
-                }
-            } else if (digitNum > digitStr.Length) {
-                for (var _ = 0; _ < digitNum - digitStr.Length; _++) {
-                    PoolManager.ReleaseObject(GetComponentInChildren<SpriteRenderer>().gameObject);
+            if (val < 0) return;
+            value = val;
+            UpdateUI();
+        }
+
+        private void Awake() {
+            if (debugMode) print($"Load {digitSprites.Length:D} digit sprite(s).");
+            if (displayOnAwake) UpdateUI();
+        }
+
+        private void UpdateUI() {
+            // sanity check
+            objectsPool.RemoveAll(obj => obj == null);
+            if (digitSprites.Length < 10) {
+                if (debugMode) print($"Missing digit sprite. Only have {digitSprites.Length} sprite(s)");
+                return;
+            }
+
+            // Instantiate game objects
+            digitNum = value.ToString().Length;
+            if (digitNum != objectsPool.Count) {
+                var diff = digitNum - objectsPool.Count;
+                for (var i = 0; i < Math.Abs(diff); i++) {
+                    if (diff > 0) {
+                        var go = new GameObject("Digit");
+                        go.AddComponent<SpriteRenderer>();
+                        go.transform.SetParent(transform);
+                        objectsPool.Add(go);
+                    } else {
+                        DestroyImmediate(objectsPool.Last());
+                        objectsPool.Remove(objectsPool.Last());
+                    }
                 }
             }
 
-            var renderers = GetComponentsInChildren<SpriteRenderer>();
-            for (var i = 0; i < digitStr.Length; i++) {
-                renderers[i].sprite = digitSprites[int.Parse(digitStr[i].ToString())];
-                renderers[i].transform.localScale = new Vector3(ActualFontSize, ActualFontSize);
-                renderers[i].transform.position = transform.position;
-                renderers[i].transform.position += new Vector3((alignLeft ? i : i -  digitStr.Length + 1) * Spacing, 0);
-                
+            // update digits UI
+            for (var i = 0; i < objectsPool.Count; i++) {
+                var component = objectsPool[i].GetComponent<SpriteRenderer>();
+                component.sprite = digitSprites[int.Parse(value.ToString()[i].ToString())];
+                component.sortingOrder = orderInLayer;
+                component.transform.localScale = new Vector3(ActualFontSize, ActualFontSize);
+                component.transform.localPosition = alignMode switch {
+                    AlignMode.Left => new Vector3(i * spacing, 0),
+                    AlignMode.Right => new Vector3((i - objectsPool.Count + 1) * spacing, 0),
+                    AlignMode.Center => new Vector3((i - objectsPool.Count / 2) * spacing, 0),
+                    _ => new Vector3((i - objectsPool.Count / 2) * spacing, 0)
+                };
             }
         }
 
+        [CustomEditor(typeof(DigitController))]
+        [CanEditMultipleObjects]
+        public class DigitControllerEditor : Editor {
+            public override void OnInspectorGUI() {
+                base.OnInspectorGUI();
+                if (GUILayout.Button("Display")) {
+                    ((DigitController)target).UpdateUI();
+                }
+            }
+        }
     }
 }

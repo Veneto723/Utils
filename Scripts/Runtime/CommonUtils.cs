@@ -128,7 +128,7 @@ namespace Utils.Scripts.Runtime {
                 num = loop ? lowerBound : upperBound;
             }
         }
-        
+
         public static void Validate(ref float num, float lowerBound = float.MinValue, float upperBound = float.MaxValue,
             bool loop = false) {
             if (Math.Abs(lowerBound - float.MinValue) > 0.01f && num < lowerBound) {

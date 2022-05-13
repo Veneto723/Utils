@@ -128,7 +128,8 @@ namespace Utils.Scripts.Runtime.ObjectPool {
         public static void ReleaseObject<T>(GameObject clone, Action<T> action) {
             action.BeginInvoke(clone.GetComponent<T>(), ar => {
                 action.EndInvoke(ar);
-                Instance.Enqueue(clone);
+                Instance.Release(clone);
+                print("release object");
             }, null);
         }
 
